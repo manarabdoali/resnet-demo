@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResNet — Interactive Deep Learning Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05080f;
+    --surface: #0d1220;
+    --panel: #111827;
+    --border: #1e2d45;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #a78bfa;
+    --green: #4ade80;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 20px rgba(0,229,255,0.3);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+  }
+  code, .mono { font-family: 'Space Mono', monospace; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(5,8,15,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 56px;
+  }
+  .nav-logo { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.05em; color: var(--accent); }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--muted); text-decoration: none; text-transform: uppercase;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ── HERO ── */
+  #hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 80px 2rem 4rem;
+    position: relative; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,229,255,0.07) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 80% 80%, rgba(167,139,250,0.06) 0%, transparent 60%);
+  }
+  .grid-overlay {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.3;
+  }
+  .hero-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.2em;
+    color: var(--accent); text-transform: uppercase;
+    border: 1px solid var(--accent); padding: 4px 14px; border-radius: 2px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease both;
+  }
+  h1 {
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 800; line-height: 0.95;
+    text-align: center;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  h1 span { color: var(--accent); }
+  .hero-sub {
+    max-width: 560px; text-align: center;
+    color: var(--muted); font-size: 1.05rem;
+    margin: 1.5rem 0 2.5rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+  .hero-ctas {
+    display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  .btn {
+    padding: 12px 28px; font-family: 'Space Mono', monospace;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+    text-decoration: none; border: none; cursor: pointer;
+    text-transform: uppercase; transition: all .2s;
+  }
+  .btn-primary {
+    background: var(--accent); color: var(--bg);
+    box-shadow: 0 0 24px rgba(0,229,255,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(0,229,255,0.6); }
+  .btn-outline {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── SECTIONS ── */
+  section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 0.5rem;
+  }
+  h2 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; margin-bottom: 1rem; }
+  .lead { color: var(--muted); font-size: 1.05rem; max-width: 680px; line-height: 1.7; margin-bottom: 3rem; }
+
+  /* ── CARD GRID ── */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1.75rem;
+    transition: border-color .2s, transform .2s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .card-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .card p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── VANISHING GRADIENT DEMO ── */
+  #gradient-demo {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 2rem; margin-top: 2rem;
+  }
+  .demo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+  .demo-title { font-size: 1.1rem; font-weight: 700; }
+  .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  .ctrl-label { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+  .slider-wrap { display: flex; align-items: center; gap: 0.5rem; }
+  input[type=range] {
+    -webkit-appearance: none; width: 120px; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: var(--accent); border-radius: 50%; cursor: pointer;
+  }
+  .val-badge {
+    font-family: 'Space Mono', monospace; font-size: 0.7rem;
+    background: var(--border); padding: 2px 8px; border-radius: 2px;
+    min-width: 2.5rem; text-align: center; color: var(--accent);
+  }
+  #gradient-canvas {
+    width: 100%; height: 180px;
+    background: var(--bg); border: 1px solid var(--border);
+    display: block;
+  }
+  .gradient-legend {
+    display: flex; gap: 1.5rem; margin-top: 0.75rem; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ── RESIDUAL BLOCK VISUALIZER ── */
+  #block-vis {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2rem; margin-top: 2rem;
+  }
+  .block-canvas-wrap { position: relative; width: 100%; }
+  #block-canvas { width: 100%; display: block; background: var(--bg); border: 1px solid var(--border); }
+  .block-controls { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
+  .toggle-btn {
+    padding: 8px 18px; font-family: 'Space Mono', monospace;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); cursor: pointer; transition: all .2s; text-transform: uppercase;
+  }
+  .toggle-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.07); }
+  .toggle-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── SKIP CONNECTION ANIMATOR ── */
+  #skip-demo {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2rem; margin-top: 2rem;
+  }
+  #skip-canvas { width: 100%; display: block; background: var(--bg); border: 1px solid var(--border); }
+
+  /* ── DEPTH COMPARISON ── */
+  #depth-compare {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2rem; margin-top: 2rem;
+  }
+  #depth-canvas { width: 100%; display: block; background: var(--bg); border: 1px solid var(--border); }
+  .depth-controls { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
+
+  /* ── TRAINING SIMULATOR ── */
+  #train-sim {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2rem; margin-top: 2rem;
+  }
+  .train-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media(max-width:600px) { .train-grid { grid-template-columns: 1fr; } }
+  #loss-canvas { width: 100%; display: block; background: var(--bg); border: 1px solid var(--border); }
+  .train-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem; }
+  .stat-box {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 0.75rem; text-align: center;
+  }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+  .stat-lbl { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; margin-top: 0.2rem; }
+  .train-btns { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+  .net-selector { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .net-btn {
+    flex: 1; padding: 8px; font-family: 'Space Mono', monospace;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .net-btn.active { background: rgba(0,229,255,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* ── ARCHITECTURE EXPLORER ── */
+  #arch-explorer {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2rem; margin-top: 2rem;
+  }
+  #arch-canvas { width: 100%; display: block; background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
+  .arch-info {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 1rem; margin-top: 1rem; min-height: 70px;
+    font-family: 'Space Mono', monospace; font-size: 0.78rem;
+    line-height: 1.6;
+  }
+  .arch-info .layer-name { color: var(--accent); font-weight: 700; font-size: 0.85rem; margin-bottom: 0.25rem; }
+  .arch-info .layer-detail { color: var(--muted); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem; color: var(--muted);
+  }
+  footer span { color: var(--accent); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { opacity: 0; transform: translateY(24px); transition: opacity .6s, transform .6s; }
+  .fade-in.visible { opacity: 1; transform: none; }
+
+  .tag-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .tag {
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 10px; border: 1px solid;
+  }
+  .tag-cyan { border-color: var(--accent); color: var(--accent); }
+  .tag-orange { border-color: var(--accent2); color: var(--accent2); }
+  .tag-purple { border-color: var(--accent3); color: var(--accent3); }
+
+  .divider {
+    width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 0;
+  }
+
+  /* progress bar */
+  .progress-bar { height: 4px; background: var(--border); margin-top: 1rem; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width .3s; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-logo">ResNet<span style="color:var(--muted)">Demo</span></div>
+  <div class="nav-links">
+    <a href="#concepts">Concepts</a>
+    <a href="#residual">Skip Connection</a>
+    <a href="#depth">Depth</a>
+    <a href="#train">Training</a>
+    <a href="#arch">Architecture</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero" style="max-width:100%; padding-top:80px;">
+  <div class="hero-bg"></div>
+  <div class="grid-overlay"></div>
+  <div class="hero-tag">Interactive Deep Learning Demo</div>
+  <h1>Deep<br>Residual<br><span>Networks</span></h1>
+  <p class="hero-sub">Explore how ResNet solved the vanishing gradient problem and enabled training of extremely deep neural networks through skip connections.</p>
+  <div class="hero-ctas">
+    <a href="#concepts" class="btn btn-primary">Explore Concepts</a>
+    <a href="#train" class="btn btn-outline">Run Training Sim</a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── CONCEPTS ── -->
+<section id="concepts">
+  <div class="section-label">01 — Core Concepts</div>
+  <h2>Why ResNet Changed Everything</h2>
+  <p class="lead">Before ResNet (2015), deeper networks often performed worse than shallow ones — a counter-intuitive result caused by the degradation problem and vanishing gradients.</p>
+  <div class="card-grid">
+    <div class="card fade-in">
+      <div class="card-icon">📉</div>
+      <h3>Vanishing Gradients</h3>
+      <p>As backprop flows through many layers, gradients shrink exponentially. Early layers receive near-zero updates, preventing learning in deep networks.</p>
+    </div>
+    <div class="card fade-in">
+      <div class="card-icon">⤵️</div>
+      <h3>Degradation Problem</h3>
+      <p>Adding more layers to a plain network causes accuracy to saturate and then degrade — even on training data. This is not overfitting; it's an optimization failure.</p>
+    </div>
+    <div class="card fade-in">
+      <div class="card-icon">➕</div>
+      <h3>Residual Learning</h3>
+      <p>Instead of learning H(x) directly, a block learns F(x) = H(x) − x (the residual). The output becomes F(x) + x via a skip connection — identity shortcut.</p>
+    </div>
+    <div class="card fade-in">
+      <div class="card-icon">🔗</div>
+      <h3>Skip Connections</h3>
+      <p>Shortcuts bypass one or more layers, adding the input directly to the output. Gradients can now flow freely through the shortcut path, solving vanishing gradients.</p>
+    </div>
+    <div class="card fade-in">
+      <div class="card-icon">🏗️</div>
+      <h3>Identity Mapping</h3>
+      <p>If extra layers are unnecessary, the network can simply learn F(x) = 0, making the block behave as an identity. This makes depth never harmful.</p>
+    </div>
+    <div class="card fade-in">
+      <div class="card-icon">🏆</div>
+      <h3>ILSVRC 2015 Winner</h3>
+      <p>ResNet-152 (152 layers!) achieved 3.57% top-5 error on ImageNet — surpassing human performance (~5.1%) for the first time.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── VANISHING GRADIENT ── -->
+<section id="vanishing" style="padding-top:4rem;">
+  <div class="section-label">02 — Vanishing Gradients</div>
+  <h2>See Gradients Vanish</h2>
+  <p class="lead">Drag the sliders to see how gradient magnitude decays through layers in a plain network vs. how skip connections preserve them in ResNet.</p>
+
+  <div id="gradient-demo" class="fade-in">
+    <div class="demo-header">
+      <div class="demo-title">Gradient Flow Visualization</div>
+      <div class="controls">
+        <div class="slider-wrap">
+          <span class="ctrl-label">LAYERS</span>
+          <input type="range" id="layer-count" min="4" max="20" value="10">
+          <span class="val-badge" id="layer-val">10</span>
+        </div>
+        <div class="slider-wrap">
+          <span class="ctrl-label">DECAY</span>
+          <input type="range" id="decay-rate" min="1" max="9" value="5">
+          <span class="val-badge" id="decay-val">0.5</span>
+        </div>
+      </div>
+    </div>
+    <canvas id="gradient-canvas" height="180"></canvas>
+    <div class="gradient-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Plain Network</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>ResNet (with skip connections)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── RESIDUAL BLOCK ── -->
+<section id="residual" style="padding-top:4rem;">
+  <div class="section-label">03 — Residual Block</div>
+  <h2>Inside a Residual Block</h2>
+  <p class="lead">Toggle between a plain layer and a residual block to see how the skip connection adds the input x directly to the output of the layers.</p>
+
+  <div id="block-vis" class="fade-in">
+    <div class="block-controls">
+      <button class="toggle-btn active" id="btn-plain" onclick="setBlockMode('plain')">Plain Block</button>
+      <button class="toggle-btn" id="btn-residual" onclick="setBlockMode('residual')">Residual Block</button>
+      <button class="toggle-btn" id="btn-bottleneck" onclick="setBlockMode('bottleneck')">Bottleneck Block</button>
+      <button class="btn btn-primary" onclick="animateSignal()" style="padding:8px 18px;font-size:0.75rem;margin-left:auto;">▶ Animate Signal</button>
+    </div>
+    <canvas id="block-canvas" height="340"></canvas>
+    <div id="block-desc" style="margin-top:1rem; font-size:0.88rem; color:var(--muted); line-height:1.6;"></div>
+  </div>
+</section>
+
+<!-- ── SKIP CONNECTION ANIM ── -->
+<section id="skip" style="padding-top:4rem;">
+  <div class="section-label">04 — Forward Pass</div>
+  <h2>Forward Pass Animation</h2>
+  <p class="lead">Watch data flow through a stack of residual blocks, with skip connections shown as curved arrows bypassing layers.</p>
+  <div id="skip-demo" class="fade-in">
+    <canvas id="skip-canvas" height="220"></canvas>
+    <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="startSkipAnim()" style="padding:8px 20px;font-size:0.75rem;">▶ Play</button>
+      <button class="toggle-btn active" onclick="resetSkipAnim()" style="padding:8px 20px;">↺ Reset</button>
+      <span style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--muted);align-self:center;">Data particle travels through the network via direct path + skip connections</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── DEPTH COMPARISON ── -->
+<section id="depth" style="padding-top:4rem;">
+  <div class="section-label">05 — Depth Comparison</div>
+  <h2>Depth vs. Accuracy</h2>
+  <p class="lead">The degradation problem shows plain networks getting worse with depth. ResNet breaks this trend — deeper is better.</p>
+  <div id="depth-compare" class="fade-in">
+    <div class="demo-header">
+      <div class="demo-title">Error Rate vs Network Depth</div>
+      <div class="tag-row">
+        <span class="tag tag-red" style="border-color:var(--red);color:var(--red);">Plain Network</span>
+        <span class="tag tag-cyan">ResNet</span>
+      </div>
+    </div>
+    <canvas id="depth-canvas" height="260"></canvas>
+    <div class="depth-controls">
+      <span class="ctrl-label">HOVER OVER CHART FOR DETAILS</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── TRAINING SIMULATOR ── -->
+<section id="train" style="padding-top:4rem;">
+  <div class="section-label">06 — Training Simulator</div>
+  <h2>Training Dynamics</h2>
+  <p class="lead">Simulate and compare training loss curves for plain networks vs ResNet across different depths. Watch how ResNet converges faster and to lower loss.</p>
+  <div id="train-sim" class="fade-in">
+    <div class="net-selector">
+      <button class="net-btn active" id="net-plain-20" onclick="selectNet('plain-20')">Plain-20</button>
+      <button class="net-btn" id="net-plain-56" onclick="selectNet('plain-56')">Plain-56</button>
+      <button class="net-btn" id="net-resnet-20" onclick="selectNet('resnet-20')">ResNet-20</button>
+      <button class="net-btn" id="net-resnet-56" onclick="selectNet('resnet-56')">ResNet-56</button>
+      <button class="net-btn" id="net-all" onclick="selectNet('all')">All</button>
+    </div>
+    <canvas id="loss-canvas" height="260"></canvas>
+    <div class="train-stats">
+      <div class="stat-box"><div class="stat-val" id="stat-epoch">0</div><div class="stat-lbl">Epoch</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-loss">—</div><div class="stat-lbl">Best Loss</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-acc">—</div><div class="stat-lbl">Val Accuracy</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-conv">—</div><div class="stat-lbl">Convergence</div></div>
+    </div>
+    <div class="train-btns">
+      <button class="btn btn-primary" onclick="runTraining()" id="train-btn" style="padding:10px 24px;font-size:0.78rem;">▶ Run Simulation</button>
+      <button class="toggle-btn active" onclick="resetTraining()" style="padding:10px 20px;">↺ Reset</button>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="train-progress"></div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── ARCHITECTURE EXPLORER ── -->
+<section id="arch" style="padding-top:4rem;">
+  <div class="section-label">07 — Architecture Explorer</div>
+  <h2>ResNet Architecture</h2>
+  <p class="lead">Click on any layer in the architecture diagram to explore its parameters, operations, and output shape.</p>
+  <div id="arch-explorer" class="fade-in">
+    <div class="tag-row" style="margin-bottom:1rem;">
+      <button class="net-btn active" style="flex:none;padding:6px 14px;" id="arch-18" onclick="setArch(18)">ResNet-18</button>
+      <button class="net-btn" style="flex:none;padding:6px 14px;" id="arch-34" onclick="setArch(34)">ResNet-34</button>
+      <button class="net-btn" style="flex:none;padding:6px 14px;" id="arch-50" onclick="setArch(50)">ResNet-50</button>
+    </div>
+    <canvas id="arch-canvas" height="180"></canvas>
+    <div class="arch-info" id="arch-info">
+      <div class="layer-detail">← Click any layer above to see details</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Built as an interactive learning demo for <span>Residual Networks (ResNet)</span> — He et al., 2015</p>
+  <p style="margin-top:0.5rem;">"Deep Residual Learning for Image Recognition" · CVPR 2016 Best Paper</p>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────
+function dpr() { return window.devicePixelRatio || 1; }
+function setupCanvas(id, h) {
+  const c = document.getElementById(id);
+  const d = dpr();
+  const w = c.parentElement.clientWidth;
+  c.width = w * d; c.height = h * d;
+  c.style.width = w + 'px'; c.style.height = h + 'px';
+  const ctx = c.getContext('2d');
+  ctx.scale(d, d);
+  return [ctx, w, h];
+}
+const C = {
+  bg: '#05080f', surface: '#0d1220', panel: '#111827', border: '#1e2d45',
+  accent: '#00e5ff', accent2: '#ff6b35', accent3: '#a78bfa',
+  green: '#4ade80', red: '#f87171', muted: '#64748b', text: '#e2e8f0'
+};
+
+// ─────────────────────────────────────────────────────
+// 1. VANISHING GRADIENT
+// ─────────────────────────────────────────────────────
+let gCtx, gW, gH;
+function initGradient() {
+  [gCtx, gW, gH] = setupCanvas('gradient-canvas', 180);
+  drawGradient();
+}
+function drawGradient() {
+  const n = parseInt(document.getElementById('layer-count').value);
+  const d = parseInt(document.getElementById('decay-rate').value) / 10;
+  document.getElementById('layer-val').textContent = n;
+  document.getElementById('decay-val').textContent = d.toFixed(1);
+  gCtx.clearRect(0, 0, gW, gH);
+  const pad = 40, pw = gW - pad * 2, ph = gH - 50;
+  // axes
+  gCtx.strokeStyle = C.border; gCtx.lineWidth = 1;
+  gCtx.beginPath(); gCtx.moveTo(pad, 10); gCtx.lineTo(pad, ph + 10); gCtx.lineTo(gW - pad, ph + 10); gCtx.stroke();
+  // y-label
+  gCtx.fillStyle = C.muted; gCtx.font = '10px Space Mono'; gCtx.textAlign = 'right';
+  gCtx.fillText('1.0', pad - 5, 14); gCtx.fillText('0.5', pad - 5, ph / 2 + 10); gCtx.fillText('0.0', pad - 5, ph + 10);
+  // x-label
+  gCtx.textAlign = 'center';
+  for (let i = 0; i <= n; i += Math.max(1, Math.floor(n / 5))) {
+    const x = pad + (i / n) * pw;
+    gCtx.fillText('L' + i, x, ph + 25);
+  }
+  // plain network line
+  gCtx.beginPath(); gCtx.strokeStyle = C.red; gCtx.lineWidth = 2.5;
+  for (let i = 0; i <= n; i++) {
+    const g = Math.pow(d, i);
+    const x = pad + (i / n) * pw, y = 10 + ph * (1 - g);
+    i === 0 ? gCtx.moveTo(x, y) : gCtx.lineTo(x, y);
+    // dot
+    gCtx.fillStyle = C.red;
+    gCtx.beginPath(); gCtx.arc(x, y, 3, 0, Math.PI * 2); gCtx.fill();
+  }
+  gCtx.stroke();
+  // resnet line (keeps gradient healthy via skip)
+  gCtx.beginPath(); gCtx.strokeStyle = C.accent; gCtx.lineWidth = 2.5;
+  for (let i = 0; i <= n; i++) {
+    const g = 0.85 + 0.1 * Math.sin(i * 0.4) * Math.pow(0.98, i);
+    const x = pad + (i / n) * pw, y = 10 + ph * (1 - Math.max(0.55, g));
+    i === 0 ? gCtx.moveTo(x, y) : gCtx.lineTo(x, y);
+    gCtx.fillStyle = C.accent;
+    gCtx.beginPath(); gCtx.arc(x, y, 3, 0, Math.PI * 2); gCtx.fill();
+  }
+  gCtx.stroke();
+}
+document.getElementById('layer-count').addEventListener('input', drawGradient);
+document.getElementById('decay-rate').addEventListener('input', drawGradient);
+
+// ─────────────────────────────────────────────────────
+// 2. RESIDUAL BLOCK VISUALIZER
+// ─────────────────────────────────────────────────────
+let bCtx, bW, bH, blockMode = 'plain', signalAnim = null;
+function initBlock() {
+  [bCtx, bW, bH] = setupCanvas('block-canvas', 340);
+  drawBlock();
+}
+function setBlockMode(m) {
+  blockMode = m;
+  ['plain','residual','bottleneck'].forEach(x => {
+    document.getElementById('btn-' + x).classList.toggle('active', x === m);
+  });
+  drawBlock();
+}
+function drawBlock(signal = null) {
+  bCtx.clearRect(0, 0, bW, bH);
+  const cx = bW / 2;
+  if (blockMode === 'plain') drawPlainBlock(cx, signal);
+  else if (blockMode === 'residual') drawResidualBlock(cx, signal);
+  else drawBottleneckBlock(cx, signal);
+}
+function drawBox(x, y, w, h, label, sublabel, color, glow) {
+  if (glow) {
+    bCtx.shadowColor = color; bCtx.shadowBlur = 18;
+  }
+  bCtx.fillStyle = C.panel; bCtx.strokeStyle = color; bCtx.lineWidth = 1.5;
+  bCtx.beginPath(); bCtx.rect(x - w/2, y, w, h); bCtx.fill(); bCtx.stroke();
+  bCtx.shadowBlur = 0;
+  bCtx.fillStyle = '#e2e8f0'; bCtx.font = 'bold 12px Syne'; bCtx.textAlign = 'center';
+  bCtx.fillText(label, x, y + h/2 + 1);
+  if (sublabel) {
+    bCtx.fillStyle = C.muted; bCtx.font = '9px Space Mono';
+    bCtx.fillText(sublabel, x, y + h/2 + 14);
+  }
+}
+function drawArrow(x1, y1, x2, y2, color, glow) {
+  if (glow) { bCtx.shadowColor = color; bCtx.shadowBlur = 12; }
+  bCtx.strokeStyle = color; bCtx.lineWidth = 2;
+  bCtx.beginPath(); bCtx.moveTo(x1, y1); bCtx.lineTo(x2, y2); bCtx.stroke();
+  bCtx.fillStyle = color;
+  bCtx.beginPath(); bCtx.moveTo(x2, y2); bCtx.lineTo(x2 - 5, y2 - 9); bCtx.lineTo(x2 + 5, y2 - 9); bCtx.closePath(); bCtx.fill();
+  bCtx.shadowBlur = 0;
+}
+function drawSignalDot(x, y, color) {
+  bCtx.shadowColor = color; bCtx.shadowBlur = 16;
+  bCtx.fillStyle = color;
+  bCtx.beginPath(); bCtx.arc(x, y, 7, 0, Math.PI * 2); bCtx.fill();
+  bCtx.shadowBlur = 0;
+}
+function drawPlainBlock(cx, sig) {
+  const layers = [
+    { label: 'Input x', sub: null, y: 20, color: C.muted },
+    { label: 'Conv 3×3', sub: 'BN + ReLU', y: 80, color: C.accent },
+    { label: 'Conv 3×3', sub: 'BN + ReLU', y: 170, color: C.accent },
+    { label: 'Output H(x)', sub: null, y: 260, color: C.muted },
+  ];
+  const stops = layers.map(l => l.y);
+  layers.forEach((l, i) => {
+    if (i > 0) drawArrow(cx, stops[i-1] + 30, cx, stops[i], C.border, false);
+    if (i === 0 || i === layers.length-1) {
+      bCtx.fillStyle = C.text; bCtx.font = 'bold 12px Syne'; bCtx.textAlign = 'center';
+      bCtx.fillText(l.label, cx, l.y + 18);
+      bCtx.fillStyle = C.muted; bCtx.font = '9px Space Mono'; bCtx.fillText('x', cx, l.y + 35);
+    } else {
+      drawBox(cx, l.y, 180, 45, l.label, l.sub, l.color, false);
+    }
+  });
+  if (sig !== null) {
+    const totalH = 290; const y = 20 + sig * totalH;
+    drawSignalDot(cx, y, C.accent2);
+  }
+  document.getElementById('block-desc').innerHTML =
+    '<strong style="color:var(--text)">Plain Block:</strong> Learns H(x) directly. Two 3×3 conv layers with BN and ReLU. Gradient must pass through all weights — risk of vanishing.';
+}
+function drawResidualBlock(cx, sig) {
+  const boxes = [
+    { label: 'Conv 3×3', sub: 'BN + ReLU', y: 60 },
+    { label: 'Conv 3×3', sub: 'BN', y: 155 },
+  ];
+  bCtx.fillStyle = C.text; bCtx.font = 'bold 12px Syne'; bCtx.textAlign = 'center';
+  bCtx.fillText('Input x', cx, 30); bCtx.fillStyle=C.muted;bCtx.font='9px Space Mono';bCtx.fillText('x',cx,44);
+  drawArrow(cx, 50, cx, 60, C.border, false);
+  boxes.forEach((b,i) => {
+    drawBox(cx, b.y, 180, 45, b.label, b.sub, C.accent, false);
+    if (i < boxes.length-1) drawArrow(cx, b.y+45, cx, boxes[i+1].y, C.border, false);
+  });
+  // skip connection curve
+  const skipX = cx + 130, skipY1 = 30, skipY2 = 255;
+  bCtx.strokeStyle = C.accent3; bCtx.lineWidth = 2.5;
+  bCtx.setLineDash([6,4]);
+  bCtx.beginPath();
+  bCtx.moveTo(cx + 90, skipY1);
+  bCtx.bezierCurveTo(skipX + 50, skipY1, skipX + 50, skipY2, cx + 90, skipY2);
+  bCtx.stroke(); bCtx.setLineDash([]);
+  bCtx.fillStyle = C.accent3; bCtx.font = '9px Space Mono'; bCtx.textAlign = 'left';
+  bCtx.fillText('Identity', skipX + 55, 150);
+  // add circle
+  bCtx.strokeStyle = C.accent3; bCtx.fillStyle = C.panel; bCtx.lineWidth = 2;
+  bCtx.beginPath(); bCtx.arc(cx, 255, 14, 0, Math.PI*2); bCtx.fill(); bCtx.stroke();
+  bCtx.fillStyle = C.accent3; bCtx.font = 'bold 14px Syne'; bCtx.textAlign = 'center';
+  bCtx.fillText('+', cx, 260);
+  // output
+  bCtx.fillStyle = C.text; bCtx.font = 'bold 12px Syne'; bCtx.fillText('Output F(x) + x', cx, 300);
+  bCtx.fillStyle = C.muted; bCtx.font = '9px Space Mono'; bCtx.fillText('H(x) = F(x) + x', cx, 314);
+  if (sig !== null) {
+    const totalH = 280; const y = 30 + sig * totalH;
+    drawSignalDot(cx, y, C.accent2);
+    // skip particle if near end
+    if (sig > 0.6) {
+      const t = (sig - 0.6) / 0.4;
+      const skipParticleX = cx + 90 + 60 * Math.sin(t * Math.PI);
+      const skipParticleY = skipY1 + t * (skipY2 - skipY1);
+      drawSignalDot(skipParticleX, skipParticleY, C.accent3);
+    }
+  }
+  document.getElementById('block-desc').innerHTML =
+    '<strong style="color:var(--text)">Residual Block:</strong> F(x) = H(x) − x is learned. The skip connection (purple dashed) adds the original input x to the output: H(x) = F(x) + x. The gradient has a clean highway through the shortcut.';
+}
+function drawBottleneckBlock(cx, sig) {
+  const boxes = [
+    { label: 'Conv 1×1', sub: '64 → 64 BN+ReLU', y: 50 },
+    { label: 'Conv 3×3', sub: '64 → 64 BN+ReLU', y: 130 },
+    { label: 'Conv 1×1', sub: '64 → 256 BN', y: 210 },
+  ];
+  bCtx.fillStyle = C.text; bCtx.font = 'bold 12px Syne'; bCtx.textAlign = 'center';
+  bCtx.fillText('Input x', cx, 20); bCtx.fillStyle=C.muted;bCtx.font='9px Space Mono';bCtx.fillText('256 channels',cx,35);
+  boxes.forEach((b,i) => {
+    if (i===0) drawArrow(cx, 40, cx, b.y, C.border);
+    else drawArrow(cx, boxes[i-1].y+45, cx, b.y, C.border);
+    const col = i===0? C.accent2 : i===1? C.accent : C.accent3;
+    drawBox(cx, b.y, 200, 45, b.label, b.sub, col, false);
+  });
+  // skip
+  const sx = cx + 120;
+  bCtx.strokeStyle = C.accent3; bCtx.lineWidth = 2; bCtx.setLineDash([5,4]);
+  bCtx.beginPath(); bCtx.moveTo(cx+100, 20); bCtx.bezierCurveTo(sx+40,20,sx+40,275,cx+100,275); bCtx.stroke();
+  bCtx.setLineDash([]); bCtx.fillStyle=C.accent3;bCtx.font='9px Space Mono';bCtx.textAlign='left';
+  bCtx.fillText('1×1 proj',sx+42,160);
+  bCtx.strokeStyle = C.accent3; bCtx.fillStyle = C.panel; bCtx.lineWidth = 2;
+  bCtx.beginPath(); bCtx.arc(cx, 276, 14, 0, Math.PI*2); bCtx.fill(); bCtx.stroke();
+  bCtx.fillStyle = C.accent3; bCtx.font = 'bold 14px Syne'; bCtx.textAlign = 'center';
+  bCtx.fillText('+', cx, 281);
+  bCtx.fillStyle = C.text; bCtx.font = 'bold 11px Syne';
+  bCtx.fillText('Output H(x)', cx, 310);
+  bCtx.fillStyle = C.muted; bCtx.font = '9px Space Mono';
+  bCtx.fillText('1×1 conv reduces computation 8–9×', cx, 326);
+  document.getElementById('block-desc').innerHTML =
+    '<strong style="color:var(--text)">Bottleneck Block:</strong> Used in ResNet-50/101/152. 1×1 conv reduces channels (e.g. 256→64), then 3×3 conv, then 1×1 conv restores them (64→256). Greatly reduces parameters while going deeper.';
+}
+function animateSignal() {
+  if (signalAnim) cancelAnimationFrame(signalAnim);
+  let progress = 0;
+  const dur = 1800, start = performance.now();
+  function step(now) {
+    progress = Math.min((now - start) / dur, 1);
+    drawBlock(progress);
+    if (progress < 1) signalAnim = requestAnimationFrame(step);
+    else { signalAnim = null; drawBlock(); }
+  }
+  signalAnim = requestAnimationFrame(step);
+}
+
+// ─────────────────────────────────────────────────────
+// 3. SKIP CONNECTION ANIMATION
+// ─────────────────────────────────────────────────────
+let skipCtx, skipW, skipH, skipAnim = null, skipT = 0;
+function initSkip() {
+  [skipCtx, skipW, skipH] = setupCanvas('skip-canvas', 220);
+  drawSkip(0);
+}
+function drawSkip(t) {
+  skipCtx.clearRect(0, 0, skipW, skipH);
+  const blocks = 5, pad = 50, blockW = 80, blockH = 60, gap = (skipW - pad*2 - blockW) / (blocks-1);
+  const midY = skipH / 2;
+  // connecting lines
+  for (let i = 0; i < blocks - 1; i++) {
+    const x1 = pad + i * gap + blockW, x2 = pad + (i+1) * gap;
+    skipCtx.strokeStyle = C.border; skipCtx.lineWidth = 1.5;
+    skipCtx.beginPath(); skipCtx.moveTo(x1, midY + blockH/2 - 5); skipCtx.lineTo(x2, midY + blockH/2 - 5); skipCtx.stroke();
+  }
+  // skip arcs
+  for (let i = 0; i < blocks - 1; i++) {
+    const x1 = pad + i * gap + blockW/2, x2 = pad + (i+1) * gap + blockW/2;
+    const topY = midY - 28;
+    skipCtx.strokeStyle = C.accent3; skipCtx.lineWidth = 1.5; skipCtx.setLineDash([5,3]);
+    skipCtx.beginPath();
+    skipCtx.moveTo(x1, midY - 5);
+    skipCtx.quadraticCurveTo((x1+x2)/2, topY, x2, midY - 5);
+    skipCtx.stroke(); skipCtx.setLineDash([]);
+    // arrow tip
+    skipCtx.fillStyle = C.accent3;
+    skipCtx.beginPath(); skipCtx.moveTo(x2, midY-5); skipCtx.lineTo(x2-6, midY-14); skipCtx.lineTo(x2+1, midY-8); skipCtx.closePath(); skipCtx.fill();
+  }
+  // blocks
+  for (let i = 0; i < blocks; i++) {
+    const bx = pad + i * gap, by = midY - 10;
+    skipCtx.fillStyle = C.panel; skipCtx.strokeStyle = C.accent; skipCtx.lineWidth = 1.5;
+    skipCtx.beginPath(); skipCtx.rect(bx, by, blockW, blockH); skipCtx.fill(); skipCtx.stroke();
+    skipCtx.fillStyle = C.text; skipCtx.font = 'bold 10px Syne'; skipCtx.textAlign = 'center';
+    skipCtx.fillText('Block ' + (i+1), bx + blockW/2, by + blockH/2 + 4);
+    skipCtx.fillStyle = C.muted; skipCtx.font = '8px Space Mono';
+    skipCtx.fillText('F(x)+x', bx + blockW/2, by + blockH/2 + 16);
+  }
+  // animated particle
+  if (t > 0) {
+    const totalLen = (blocks - 1) * gap + blockW * blocks;
+    const pos = t * (totalLen + pad);
+    const progress = pos / (skipW - pad);
+    for (let i = 0; i < blocks; i++) {
+      const bx = pad + i * gap;
+      if (pos >= bx && pos <= bx + blockW) {
+        const px = pos, py = midY + blockH/2 - 5;
+        skipCtx.shadowColor = C.accent2; skipCtx.shadowBlur = 14;
+        skipCtx.fillStyle = C.accent2;
+        skipCtx.beginPath(); skipCtx.arc(px, py, 6, 0, Math.PI*2); skipCtx.fill();
+        skipCtx.shadowBlur = 0;
+      } else if (i < blocks-1) {
+        const x1 = pad + i*gap + blockW, x2 = pad + (i+1)*gap;
+        if (pos > x1 && pos < x2) {
+          const px = pos, py = midY + blockH/2 - 5;
+          skipCtx.shadowColor = C.green; skipCtx.shadowBlur = 12;
+          skipCtx.fillStyle = C.green;
+          skipCtx.beginPath(); skipCtx.arc(px, py, 5, 0, Math.PI*2); skipCtx.fill();
+          skipCtx.shadowBlur = 0;
+        }
+      }
+    }
+    // skip particle with slight offset
+    if (t > 0.1) {
+      const skipProgress = (t - 0.1) / 0.9;
+      const si = Math.floor(skipProgress * (blocks-1));
+      const st = (skipProgress * (blocks-1)) - si;
+      if (si < blocks-1) {
+        const x1 = pad + si*gap + blockW/2, x2 = pad + (si+1)*gap + blockW/2;
+        const topY = midY - 28;
+        const qx = (x1+x2)/2, qy = topY;
+        const blt = 1 - st;
+        const spx = blt*blt*x1 + 2*blt*st*qx + st*st*x2;
+        const spy = blt*blt*(midY-5) + 2*blt*st*qy + st*st*(midY-5);
+        skipCtx.shadowColor = C.accent3; skipCtx.shadowBlur = 12;
+        skipCtx.fillStyle = C.accent3;
+        skipCtx.beginPath(); skipCtx.arc(spx, spy, 5, 0, Math.PI*2); skipCtx.fill();
+        skipCtx.shadowBlur = 0;
+      }
+    }
+  }
+  // labels
+  skipCtx.fillStyle = C.muted; skipCtx.font = '9px Space Mono'; skipCtx.textAlign = 'center';
+  skipCtx.fillText('● Data particle', skipW/2 - 80, skipH - 10);
+  skipCtx.fillStyle = C.accent3;
+  skipCtx.fillText('● Skip path', skipW/2 + 60, skipH - 10);
+}
+function startSkipAnim() {
+  if (skipAnim) cancelAnimationFrame(skipAnim);
+  const dur = 3000, start = performance.now();
+  function step(now) {
+    skipT = Math.min((now - start) / dur, 1);
+    drawSkip(skipT);
+    if (skipT < 1) skipAnim = requestAnimationFrame(step);
+  }
+  skipAnim = requestAnimationFrame(step);
+}
+function resetSkipAnim() {
+  if (skipAnim) cancelAnimationFrame(skipAnim);
+  skipT = 0; drawSkip(0);
+}
+
+// ─────────────────────────────────────────────────────
+// 4. DEPTH COMPARISON CHART
+// ─────────────────────────────────────────────────────
+let dCtx, dW, dH;
+const depthData = {
+  plain: [
+    {d:20, e:27.9}, {d:32, e:27.0}, {d:44, e:27.4}, {d:56, e:27.7},
+    {d:110, e:44.7}, {d:152, e:55.2}
+  ],
+  resnet: [
+    {d:20, e:27.9}, {d:32, e:25.5}, {d:44, e:24.7}, {d:56, e:25.0},
+    {d:110, e:22.7}, {d:152, e:21.0}
+  ]
+};
+function initDepth() {
+  [dCtx, dW, dH] = setupCanvas('depth-canvas', 260);
+  drawDepth();
+}
+function drawDepth(hoverX) {
+  dCtx.clearRect(0, 0, dW, dH);
+  const pad = {l:50, r:20, t:20, b:40};
+  const pw = dW - pad.l - pad.r, ph = dH - pad.t - pad.b;
+  const depths = depthData.plain.map(d=>d.d);
+  const minD = 20, maxD = 152, minE = 18, maxE = 60;
+  const toX = d => pad.l + ((d-minD)/(maxD-minD))*pw;
+  const toY = e => pad.t + ph - ((e-minE)/(maxE-minE))*ph;
+  // grid
+  dCtx.strokeStyle = C.border; dCtx.lineWidth = 0.5;
+  [20,30,40,50,60].forEach(e => {
+    dCtx.beginPath(); dCtx.moveTo(pad.l, toY(e)); dCtx.lineTo(dW-pad.r, toY(e)); dCtx.stroke();
+    dCtx.fillStyle = C.muted; dCtx.font = '9px Space Mono'; dCtx.textAlign = 'right';
+    dCtx.fillText(e+'%', pad.l-5, toY(e)+4);
+  });
+  depths.forEach(d => {
+    const x = toX(d);
+    dCtx.strokeStyle = C.border;
+    dCtx.beginPath(); dCtx.moveTo(x, pad.t); dCtx.lineTo(x, dH-pad.b); dCtx.stroke();
+    dCtx.fillStyle = C.muted; dCtx.font = '9px Space Mono'; dCtx.textAlign = 'center';
+    dCtx.fillText(d, x, dH-pad.b+14);
+  });
+  // axes
+  dCtx.strokeStyle = C.muted; dCtx.lineWidth = 1;
+  dCtx.beginPath(); dCtx.moveTo(pad.l, pad.t); dCtx.lineTo(pad.l, dH-pad.b); dCtx.lineTo(dW-pad.r, dH-pad.b); dCtx.stroke();
+  // labels
+  dCtx.fillStyle = C.muted; dCtx.font = '9px Space Mono'; dCtx.textAlign = 'center';
+  dCtx.fillText('Network Depth (layers)', dW/2, dH-2);
+  dCtx.save(); dCtx.translate(12, dH/2); dCtx.rotate(-Math.PI/2);
+  dCtx.fillText('Error Rate (%)', 0, 0); dCtx.restore();
+  // lines
+  function drawLine(data, color) {
+    dCtx.beginPath(); dCtx.strokeStyle = color; dCtx.lineWidth = 2.5;
+    data.forEach((pt,i) => {
+      const x = toX(pt.d), y = toY(pt.e);
+      i===0 ? dCtx.moveTo(x,y) : dCtx.lineTo(x,y);
+    });
+    dCtx.stroke();
+    data.forEach(pt => {
+      dCtx.fillStyle = color;
+      dCtx.beginPath(); dCtx.arc(toX(pt.d), toY(pt.e), 5, 0, Math.PI*2); dCtx.fill();
+    });
+  }
+  drawLine(depthData.plain, C.red);
+  drawLine(depthData.resnet, C.accent);
+  // legend
+  dCtx.fillStyle = C.red; dCtx.beginPath(); dCtx.arc(pad.l+10, pad.t+10, 5, 0, Math.PI*2); dCtx.fill();
+  dCtx.fillStyle = C.text; dCtx.font = '10px Syne'; dCtx.textAlign = 'left';
+  dCtx.fillText('Plain Network', pad.l+20, pad.t+14);
+  dCtx.fillStyle = C.accent; dCtx.beginPath(); dCtx.arc(pad.l+110, pad.t+10, 5, 0, Math.PI*2); dCtx.fill();
+  dCtx.fillStyle = C.text; dCtx.fillText('ResNet', pad.l+120, pad.t+14);
+  // annotation arrows for degradation
+  dCtx.fillStyle = C.red; dCtx.font = '9px Space Mono';
+  dCtx.fillText('↑ Degradation', toX(110)+5, toY(44.7)-10);
+  dCtx.fillStyle = C.accent; dCtx.fillText('↓ Keeps improving', toX(110)+5, toY(22.7)+20);
+}
+document.getElementById('depth-canvas').addEventListener('mousemove', (e) => {
+  const r = e.target.getBoundingClientRect();
+  drawDepth(e.clientX - r.left);
+});
+
+// ─────────────────────────────────────────────────────
+// 5. TRAINING SIMULATOR
+// ─────────────────────────────────────────────────────
+let tCtx, tW, tH, trainAnim = null, trainFrame = 0, selectedNet = 'plain-20';
+const nets = {
+  'plain-20':  { label:'Plain-20',  color:'#f87171', finalLoss:0.52, curve:'slow', acc:71 },
+  'plain-56':  { label:'Plain-56',  color:'#fb923c', finalLoss:0.78, curve:'degrade', acc:65 },
+  'resnet-20': { label:'ResNet-20', color:'#00e5ff', finalLoss:0.31, curve:'fast', acc:91 },
+  'resnet-56': { label:'ResNet-56', color:'#a78bfa', finalLoss:0.22, curve:'vfast', acc:94 },
+};
+let lossHistory = {};
+function selectNet(n) {
+  selectedNet = n;
+  Object.keys(nets).forEach(k => {
+    const b = document.getElementById('net-' + k);
+    if (b) b.classList.toggle('active', k === n);
+  });
+  const all = document.getElementById('net-all');
+  if (all) all.classList.toggle('active', n === 'all');
+  resetTraining();
+}
+function getLoss(net, epoch, totalEpochs) {
+  const t = epoch / totalEpochs;
+  const { finalLoss, curve } = nets[net];
+  const noise = () => (Math.random() - 0.5) * 0.04;
+  if (curve === 'slow') return 1.5 * Math.exp(-2.5 * t) + finalLoss + noise();
+  if (curve === 'degrade') return 0.8 + 0.5 * Math.exp(-1.5 * t) + 0.2 * t + noise();
+  if (curve === 'fast') return 1.4 * Math.exp(-4 * t) + finalLoss + noise();
+  if (curve === 'vfast') return 1.3 * Math.exp(-5 * t) + finalLoss + noise();
+  return 1;
+}
+function initTrain() {
+  [tCtx, tW, tH] = setupCanvas('loss-canvas', 260);
+  drawLoss();
+}
+function drawLoss() {
+  tCtx.clearRect(0, 0, tW, tH);
+  const pad = {l:45, r:20, t:20, b:35};
+  const pw = tW - pad.l - pad.r, ph = tH - pad.t - pad.b;
+  const EPOCHS = 100;
+  const toX = e => pad.l + (e/EPOCHS)*pw;
+  const toY = l => pad.t + ph - (Math.max(0, Math.min(2, l)) / 2) * ph;
+  // grid
+  [0, 0.5, 1.0, 1.5, 2.0].forEach(l => {
+    tCtx.strokeStyle = C.border; tCtx.lineWidth = 0.5;
+    tCtx.beginPath(); tCtx.moveTo(pad.l, toY(l)); tCtx.lineTo(tW-pad.r, toY(l)); tCtx.stroke();
+    tCtx.fillStyle = C.muted; tCtx.font = '9px Space Mono'; tCtx.textAlign = 'right';
+    tCtx.fillText(l.toFixed(1), pad.l-5, toY(l)+4);
+  });
+  [0,20,40,60,80,100].forEach(e => {
+    tCtx.strokeStyle = C.border; tCtx.lineWidth = 0.5;
+    tCtx.beginPath(); tCtx.moveTo(toX(e), pad.t); tCtx.lineTo(toX(e), tH-pad.b); tCtx.stroke();
+    tCtx.fillStyle = C.muted; tCtx.font = '9px Space Mono'; tCtx.textAlign = 'center';
+    tCtx.fillText(e, toX(e), tH-pad.b+14);
+  });
+  tCtx.fillStyle = C.muted; tCtx.font = '9px Space Mono'; tCtx.textAlign = 'center';
+  tCtx.fillText('Training Epoch', tW/2, tH-2);
+  tCtx.save(); tCtx.translate(12, tH/2); tCtx.rotate(-Math.PI/2);
+  tCtx.fillText('Training Loss', 0, 0); tCtx.restore();
+  // draw histories
+  const netsToShow = selectedNet === 'all' ? Object.keys(nets) : [selectedNet];
+  netsToShow.forEach(key => {
+    const hist = lossHistory[key];
+    if (!hist || hist.length === 0) return;
+    tCtx.beginPath(); tCtx.strokeStyle = nets[key].color; tCtx.lineWidth = 2;
+    hist.forEach((l, i) => {
+      const x = toX(i + 1), y = toY(l);
+      i === 0 ? tCtx.moveTo(x, y) : tCtx.lineTo(x, y);
+    });
+    tCtx.stroke();
+    // label at end
+    if (hist.length > 0) {
+      const lastX = toX(hist.length), lastY = toY(hist[hist.length-1]);
+      tCtx.fillStyle = nets[key].color; tCtx.font = '9px Space Mono'; tCtx.textAlign = 'left';
+      tCtx.fillText(nets[key].label, lastX + 4, lastY + 4);
+    }
+  });
+}
+function runTraining() {
+  if (trainAnim) return;
+  lossHistory = {};
+  const EPOCHS = 100;
+  const netsToRun = selectedNet === 'all' ? Object.keys(nets) : [selectedNet];
+  netsToRun.forEach(k => { lossHistory[k] = []; });
+  let e = 0;
+  document.getElementById('train-btn').disabled = true;
+  function step() {
+    netsToRun.forEach(k => {
+      if (lossHistory[k].length <= e) {
+        lossHistory[k].push(getLoss(k, e, EPOCHS));
+      }
+    });
+    e++;
+    document.getElementById('stat-epoch').textContent = e;
+    const bestNet = selectedNet === 'all' ? 'resnet-56' : selectedNet;
+    const bestLoss = lossHistory[bestNet] ? Math.min(...lossHistory[bestNet]).toFixed(3) : '—';
+    document.getElementById('stat-loss').textContent = bestLoss === '—' ? '—' : bestLoss;
+    document.getElementById('stat-acc').textContent = e >= EPOCHS ? (nets[bestNet]?.acc || '—') + '%' : '—';
+    document.getElementById('stat-conv').textContent = e >= 20 && lossHistory[bestNet] ? (lossHistory[bestNet][19] < 0.6 ? 'Fast ✓' : 'Slow') : '—';
+    document.getElementById('train-progress').style.width = (e/EPOCHS*100)+'%';
+    drawLoss();
+    if (e < EPOCHS) trainAnim = requestAnimationFrame(step);
+    else { trainAnim = null; document.getElementById('train-btn').disabled = false; }
+  }
+  trainAnim = requestAnimationFrame(step);
+}
+function resetTraining() {
+  if (trainAnim) { cancelAnimationFrame(trainAnim); trainAnim = null; }
+  lossHistory = {}; trainFrame = 0;
+  document.getElementById('stat-epoch').textContent = '0';
+  document.getElementById('stat-loss').textContent = '—';
+  document.getElementById('stat-acc').textContent = '—';
+  document.getElementById('stat-conv').textContent = '—';
+  document.getElementById('train-progress').style.width = '0%';
+  document.getElementById('train-btn').disabled = false;
+  initTrain();
+}
+
+// ─────────────────────────────────────────────────────
+// 6. ARCHITECTURE EXPLORER
+// ─────────────────────────────────────────────────────
+let aCtx, aW, aH, currentArch = 18, selectedLayer = null;
+const archConfigs = {
+  18: {
+    layers: [
+      { name:'Input', detail:'224×224×3 image', color: C.muted, w: 50 },
+      { name:'Conv1', detail:'7×7, 64 filters, stride 2\nOutput: 112×112×64', color: C.accent2, w: 55 },
+      { name:'MaxPool', detail:'3×3 pool, stride 2\nOutput: 56×56×64', color: C.muted, w: 45 },
+      { name:'Block 1', detail:'2× [3×3, 64] residual\nOutput: 56×56×64', color: C.accent, w: 70 },
+      { name:'Block 2', detail:'2× [3×3, 128] residual\nOutput: 28×28×128', color: C.accent, w: 70 },
+      { name:'Block 3', detail:'2× [3×3, 256] residual\nOutput: 14×14×256', color: C.accent, w: 70 },
+      { name:'Block 4', detail:'2× [3×3, 512] residual\nOutput: 7×7×512', color: C.accent, w: 70 },
+      { name:'AvgPool', detail:'Global avg pooling\nOutput: 1×1×512', color: C.muted, w: 50 },
+      { name:'FC+Softmax', detail:'Fully connected 512→1000\nOutput: 1000 class scores', color: C.accent3, w: 80 },
+    ]
+  },
+  34: {
+    layers: [
+      { name:'Input', detail:'224×224×3', color: C.muted, w: 50 },
+      { name:'Conv1', detail:'7×7, 64 filters, stride 2', color: C.accent2, w: 55 },
+      { name:'MaxPool', detail:'3×3, stride 2', color: C.muted, w: 45 },
+      { name:'Block 1', detail:'3× [3×3,64] residual\n56×56×64', color: C.accent, w: 70 },
+      { name:'Block 2', detail:'4× [3×3,128] residual\n28×28×128', color: C.accent, w: 70 },
+      { name:'Block 3', detail:'6× [3×3,256] residual\n14×14×256', color: C.accent, w: 70 },
+      { name:'Block 4', detail:'3× [3×3,512] residual\n7×7×512', color: C.accent, w: 70 },
+      { name:'AvgPool', detail:'Global avg pooling', color: C.muted, w: 50 },
+      { name:'FC+Softmax', detail:'512→1000 classes', color: C.accent3, w: 80 },
+    ]
+  },
+  50: {
+    layers: [
+      { name:'Input', detail:'224×224×3', color: C.muted, w: 50 },
+      { name:'Conv1', detail:'7×7, 64, stride 2', color: C.accent2, w: 55 },
+      { name:'MaxPool', detail:'3×3, stride 2', color: C.muted, w: 45 },
+      { name:'Block 1', detail:'3× bottleneck [1×1,3×3,1×1]\n64→256 channels', color: C.accent, w: 85 },
+      { name:'Block 2', detail:'4× bottleneck\n128→512 channels', color: C.accent, w: 85 },
+      { name:'Block 3', detail:'6× bottleneck\n256→1024 channels', color: C.accent, w: 85 },
+      { name:'Block 4', detail:'3× bottleneck\n512→2048 channels', color: C.accent, w: 85 },
+      { name:'AvgPool', detail:'Global avg pooling', color: C.muted, w: 50 },
+      { name:'FC+Softmax', detail:'2048→1000 classes', color: C.accent3, w: 80 },
+    ]
+  }
+};
+let layerRects = [];
+function setArch(n) {
+  currentArch = n; selectedLayer = null;
+  ['18','34','50'].forEach(v => {
+    document.getElementById('arch-' + v).classList.toggle('active', parseInt(v)===n);
+  });
+  initArch();
+}
+function initArch() {
+  [aCtx, aW, aH] = setupCanvas('arch-canvas', 180);
+  drawArch();
+}
+function drawArch() {
+  aCtx.clearRect(0, 0, aW, aH);
+  const cfg = archConfigs[currentArch];
+  const layers = cfg.layers;
+  const totalW = layers.reduce((s, l) => s + l.w + 8, -8);
+  const startX = (aW - totalW) / 2;
+  const midY = aH / 2;
+  layerRects = [];
+  let cx = startX;
+  layers.forEach((l, i) => {
+    const x = cx, w = l.w, h = 60;
+    const sel = selectedLayer === i;
+    aCtx.fillStyle = sel ? C.panel : '#0a0f1e';
+    aCtx.strokeStyle = sel ? C.accent : l.color;
+    aCtx.lineWidth = sel ? 2.5 : 1.5;
+    if (sel) { aCtx.shadowColor = C.accent; aCtx.shadowBlur = 14; }
+    aCtx.beginPath(); aCtx.rect(x, midY - h/2, w, h); aCtx.fill(); aCtx.stroke();
+    aCtx.shadowBlur = 0;
+    // label
+    const fontSize = w < 55 ? 8 : 9;
+    aCtx.fillStyle = sel ? C.accent : C.text; aCtx.font = `bold ${fontSize}px Syne`; aCtx.textAlign = 'center';
+    const name = l.name;
+    aCtx.fillText(name, x + w/2, midY + 5);
+    layerRects.push({ x, y: midY - h/2, w, h, i });
+    // arrow
+    if (i < layers.length - 1) {
+      const ax = x + w + 2;
+      aCtx.strokeStyle = C.border; aCtx.lineWidth = 1;
+      aCtx.beginPath(); aCtx.moveTo(ax, midY); aCtx.lineTo(ax + 6, midY); aCtx.stroke();
+      aCtx.fillStyle = C.border;
+      aCtx.beginPath(); aCtx.moveTo(ax+6, midY); aCtx.lineTo(ax+2, midY-3); aCtx.lineTo(ax+2, midY+3); aCtx.closePath(); aCtx.fill();
+    }
+    cx += w + 8;
+  });
+}
+document.getElementById('arch-canvas').addEventListener('click', e => {
+  const r = e.target.getBoundingClientRect();
+  const d = dpr();
+  const mx = (e.clientX - r.left), my = (e.clientY - r.top);
+  const hit = layerRects.find(lr => mx >= lr.x && mx <= lr.x+lr.w && my >= lr.y && my <= lr.y+lr.h);
+  if (hit) {
+    selectedLayer = hit.i;
+    const l = archConfigs[currentArch].layers[hit.i];
+    document.getElementById('arch-info').innerHTML =
+      `<div class="layer-name">${l.name}</div><div class="layer-detail">${l.detail.replace(/\n/g,'<br>')}</div>`;
+    drawArch();
+  }
+});
+
+// ─────────────────────────────────────────────────────
+// INIT & RESIZE
+// ─────────────────────────────────────────────────────
+function initAll() {
+  initGradient(); initBlock(); initSkip(); initDepth(); initTrain(); initArch();
+}
+window.addEventListener('resize', () => {
+  initAll();
+  if (skipT > 0) drawSkip(skipT);
+});
+window.addEventListener('load', initAll);
+
+// fade-in observer
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
